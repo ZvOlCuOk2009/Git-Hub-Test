@@ -1,5 +1,5 @@
 //
-//  ViewController.h
+//  TSMainViewController.h
 //  Git Hub Test
 //
 //  Created by Mac on 18.01.17.
@@ -8,8 +8,6 @@
 
 #import <UIKit/UIKit.h>
 
-@interface ViewController : UIViewController
-
+@interface TSMainViewController : UIViewController
 
 @end
-
