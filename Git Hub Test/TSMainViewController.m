@@ -9,12 +9,14 @@
 #import "TSMainViewController.h"
 #import "TSTableViewCell.h"
 #import "TSServerManager.h"
+#import "TSEvent.h"
+#import "UIImageView+AFNetworking.h"
+#import "TSWebViewViewController.h"
 
 @interface TSMainViewController ()
 
 @property (strong, nonatomic) IBOutlet UITableView *tableView;
-@property (strong, nonatomic) NSMutableArray *dataSource;
-@property (strong, nonatomic) NSArray *myDataSource;
+@property (strong, nonatomic) NSArray *dataSource;
 
 @end
 
@@ -23,54 +25,35 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    self.dataSource = [NSMutableArray array];
-    
-    for (int i = 0; i < 20; i++) {
-        NSString *string = [NSString stringWithFormat:@"string %d", i];
-        [self.dataSource addObject:string];
-    }
-    
+    [self requestDataFromTheServer];
+}
+
+
+- (IBAction)refreshPressedButton:(id)sender
+{
+    [self requestDataFromTheServer];
+}
+
+#pragma mark - API
+
+- (void)requestDataFromTheServer
+{
     [[TSServerManager sharedManager] getDataOnByURL:^(NSArray *dataSource) {
         
-        self.myDataSource = dataSource;
-        
-        NSDictionary *actor = [self.myDataSource objectAtIndex:0];
-        
-        NSURL *avatarUrl = [[actor objectForKey:@"actor"] objectForKey:@"avatar_url"];
-        NSString *displayLogin = [[actor objectForKey:@"actor"]  objectForKey:@"display_login"];
-        NSString *uid = [[actor objectForKey:@"actor"]  objectForKey:@"id"];
-        NSString *login = [[actor objectForKey:@"actor"]  objectForKey:@"login"];
-        NSURL *url = [[actor objectForKey:@"actor"]  objectForKey:@"url"];
+        self.dataSource = [NSArray arrayWithArray:dataSource];
+        [self.tableView reloadData];
         
     } onFailure:^(NSError *error) {
-        
+        NSLog(@"error %@", error.localizedDescription);
     }];
-    
 }
-/*
-{
-    actor =     {
-        "avatar_url" = "https://avatars.githubusercontent.com/u/22453207?";
-        "display_login" = oh000024;
-        "gravatar_id" = "";
-        id = 22453207;
-        login = oh000024;
-        url = "https://api.github.com/users/oh000024";
-    };
-    "created_at" = "2017-01-18T23:33:52Z";
-    id = 5176156220;
-    payload =     {
-        description = "MADD9022 Closures Assignment";
-        "master_branch" = master;
-        "pusher_type" = user;
-        ref = master;
-        "ref_type" = branch;
-    };
-*/
+
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
 }
+
+#pragma mark - UITableViewDataSource
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
@@ -87,18 +70,53 @@
         cell = [[TSTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
     }
     
-    cell.titleLabel.text = [self.dataSource objectAtIndex:indexPath.row];
-    cell.detailLabel.text = [self.dataSource objectAtIndex:indexPath.row];
-    cell.avatarImageView.image = [UIImage imageNamed:@"featured_google"];
+    TSEvent *event = [self.dataSource objectAtIndex:indexPath.row];
+    cell.titleLabel.text = event.titleLabel;
+    cell.detailLabel.text = [NSString stringWithFormat:@"%@ %@", event.eventLabel, [self getCurrentData]];
     
+    NSURLRequest *request = [NSURLRequest requestWithURL:event.avatarURL];
+    
+    __weak UITableViewCell *weakCell = cell;
+    cell.imageView.image = nil;
+    
+    [cell.imageView setImageWithURLRequest:request placeholderImage:[UIImage imageNamed:@"avatar-placeholder"]
+                                   success:^(NSURLRequest * _Nonnull request, NSHTTPURLResponse * _Nullable response, UIImage * _Nonnull image) {
+                                       weakCell.imageView.image = image;
+                                   } failure:^(NSURLRequest * _Nonnull request, NSHTTPURLResponse * _Nullable response, NSError * _Nonnull error) {
+                                       NSLog(@"error %@", error.localizedDescription);
+                                   }];
+    [self getCurrentData];
     return cell;
 }
 
+#pragma mark - UITableViewDelegate
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    TSWebViewViewController *controller =
+    [self.storyboard instantiateViewControllerWithIdentifier:@"TSWebViewViewController"];
+    TSEvent *event = [self.dataSource objectAtIndex:indexPath.row];
+    controller.htmlUrl = event.htmlURL;
+    [self.navigationController pushViewController:controller animated:YES];
+}
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     return 60;
 }
 
+#pragma mark - data
+
+- (NSString *)getCurrentData
+{
+    NSLocale* currentLocale = [NSLocale currentLocale];
+    [[NSDate date] descriptionWithLocale:currentLocale];
+    NSDateFormatter *dateFormatter=[[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    NSString *currentData = [dateFormatter stringFromDate:[NSDate date]];
+    return currentData;
+}
 
 @end

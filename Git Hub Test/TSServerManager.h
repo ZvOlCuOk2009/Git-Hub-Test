@@ -9,11 +9,15 @@
 #import <Foundation/Foundation.h>
 #import <AFNetworking.h>
 
-#import "TSDataSourse.h"
-
 @interface TSServerManager : NSObject
 
 + (TSServerManager *)sharedManager;
-- (void)getDataOnByURL:(void(^)(NSArray *dataSource))success onFailure:(void(^)(NSError *error))failure;
+
+- (void)getDataOnByURL:(void(^)(NSArray *dataSource))success
+             onFailure:(void(^)(NSError *error))failure;
+
+- (void)getHtmlUrl:(NSString *)url
+         onSuccess:(void(^)(NSString *htmlUrl))success
+         onFailure:(void(^)(NSError *error))failure;
 
 @end

@@ -7,6 +7,7 @@
 //
 
 #import "TSServerManager.h"
+#import "TSEvent.h"
 
 @interface TSServerManager ()
 
@@ -37,16 +38,21 @@
 
 #pragma mark - Methods API
 
-- (void)getDataOnByURL:(void(^)(NSArray *dataSource)) success onFailure:(void(^)(NSError *error)) failure {
+- (void)getDataOnByURL:(void(^)(NSArray *dataSource))success onFailure:(void(^)(NSError *error)) failure {
     
     [self.sessionManager GET:@"https://api.github.com/events"
                   parameters:nil
                     progress:^(NSProgress * _Nonnull downloadProgress) {
                         
                     } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
-                        NSArray *dataSource = [NSArray arrayWithArray:responseObject];
+                        
+                        NSMutableArray *objectArray = [NSMutableArray array];
+                        for (NSDictionary *dictionary in responseObject) {
+                            TSEvent *event = [[TSEvent alloc] initWithServerResponse:dictionary];
+                            [objectArray addObject:event];
+                        }
                         if (success) {
-                            success(dataSource);
+                            success(objectArray);
                         }
                     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
                         if (failure) {
@@ -56,5 +62,26 @@
 
 }
 
+- (void)getHtmlUrl:(NSString *)url onSuccess:(void(^)(NSString *htmlUrl))success onFailure:(void(^)(NSError *error))failure
+{
+    [self.sessionManager GET:url
+                  parameters:nil
+                    progress:^(NSProgress * _Nonnull downloadProgress) {
+                        
+                    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+                        
+                        TSEvent *event = [[TSEvent alloc] initWithServerObject:responseObject];
+                        NSString *html = event.htmlURL;
+                        
+                        if (success) {
+                            success(html);
+                        }
+                    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+                        if (failure) {
+                            failure(error);
+                        }
+                    }];
+
+}
 
 @end
